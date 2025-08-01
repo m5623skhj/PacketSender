@@ -3,10 +3,206 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:PacketSender"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="Packet Sender" Height="600" Width="1000">
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="5"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
+        <!-- 패킷 목록 (왼쪽) -->
+        <DockPanel Grid.Column="0">
+            <TextBlock DockPanel.Dock="Top" Text="Packet List" FontWeight="Bold" Margin="5" FontSize="14"/>
+
+            <!-- 검색 박스 -->
+            <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="1" Margin="5,0,5,5" Padding="5">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="SearchTextBox" 
+                             Grid.Column="0"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             VerticalAlignment="Center"
+                             Padding="5,3"/>
+                    <TextBlock Grid.Column="0" 
+                               Text="Search packets..." 
+                               Foreground="Gray" 
+                               IsHitTestVisible="False" 
+                               VerticalAlignment="Center"
+                               Margin="8,0,0,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Text, ElementName=SearchTextBox}" Value="">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <Button Grid.Column="1" 
+                            Content="✕" 
+                            Width="20" 
+                            Height="20" 
+                            Margin="3,0,0,0"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            FontSize="10"
+                            Command="{Binding ClearSearchCommand}"
+                            ToolTip="Clear search">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Text, ElementName=SearchTextBox}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Text, ElementName=SearchTextBox}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <Border BorderBrush="Gray" BorderThickness="1" Margin="5,0,5,5">
+                <ListBox x:Name="PacketListBox" 
+                         ItemsSource="{Binding FilteredPackets}"
+                         SelectedItem="{Binding SelectedPacket}"
+                         DisplayMemberPath="PacketName"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="8,4"/>
+                            <Setter Property="Margin" Value="1"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+            </Border>
+        </DockPanel>
+
+        <!-- 구분선 -->
+        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="LightGray"/>
+
+        <!-- 패킷 상세 정보 (오른쪽) -->
+        <DockPanel Grid.Column="2">
+            <TextBlock DockPanel.Dock="Top" Text="Packet Details" FontWeight="Bold" Margin="5" FontSize="14"/>
+            <Border BorderBrush="Gray" BorderThickness="1" Margin="5">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <!-- 패킷이 선택되지 않았을 때 -->
+                        <TextBlock x:Name="NoSelectionText" 
+                                   Text="Select a packet to view details" 
+                                   FontStyle="Italic" 
+                                   Foreground="Gray"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Margin="20">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedPacket}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <!-- 패킷이 선택되었을 때 -->
+                        <StackPanel x:Name="PacketDetailsPanel">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedPacket}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+
+                            <!-- 패킷 기본 정보 -->
+                            <Grid Margin="0,0,0,15">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Packet Name: " FontWeight="Bold" Margin="0,0,10,5"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedPacket.PacketName}" Margin="0,0,0,5"/>
+
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Type: " FontWeight="Bold" Margin="0,0,10,0"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedPacket.Type}"/>
+                            </Grid>
+
+                            <!-- 패킷 필드들 -->
+                            <TextBlock Text="Fields:" FontWeight="Bold" Margin="0,0,0,5">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedPacket.Items.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
+                            <TextBlock Text="No fields defined" FontStyle="Italic" Foreground="Gray">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedPacket.Items.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
+                            <ItemsControl ItemsSource="{Binding SelectedPacket.Items}" Margin="10,0,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="LightGray" BorderThickness="1" Margin="0,2" Padding="8">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Name: " FontWeight="Bold" Margin="0,0,10,2"/>
+                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Name}" Margin="0,0,0,2"/>
+
+                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Type: " FontWeight="Bold" Margin="0,0,10,0"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Type}"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </DockPanel>
     </Grid>
 </Window>
