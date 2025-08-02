@@ -3,8 +3,11 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Collections.ObjectModel;
-using PacketSender.PacketLoader;
 using System.Windows.Threading;
+using PacketSender.Packet;
+using PacketSender.ViewModels;
+using System.Text;
+using System.IO;
 
 namespace PacketSender
 {
@@ -24,6 +27,8 @@ namespace PacketSender
             {
                 _selectedPacket = value;
                 OnPropertyChanged();
+
+                PacketInstance.LoadPacket(value);
             }
         }
 
@@ -42,10 +47,14 @@ namespace PacketSender
         }
 
         public ICommand ClearSearchCommand { get; }
+        public PacketInstanceViewModel PacketInstance { get; }
 
         public MainWindow()
         {
             InitializeComponent();
+            PacketInstance = new PacketInstanceViewModel();
+            PacketInstance.PacketSendRequested += OnPacketSendRequested;
+
             DataContext = this;
 
             _searchTimer = new DispatcherTimer
@@ -119,6 +128,106 @@ namespace PacketSender
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        private void OnPacketSendRequested(Dictionary<string, object> fieldValues)
+        {
+            try
+            {
+                var binarySerialized = SerializeToBinary(fieldValues);
+                MessageBox.Show("Packet serialized successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                // SendPacketToServer(binarySerialized);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Serialization error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private byte[] SerializeToBinary(Dictionary<string, object> fieldValues)
+        {
+            using var stream = new MemoryStream();
+            using var writer = new BinaryWriter(stream, Encoding.UTF8);
+            
+            foreach (var field in fieldValues)
+            {
+                SerializeFieldValue(writer, field.Value);
+            }
+
+            return stream.ToArray();
+        }
+
+        private void SerializeFieldValue(BinaryWriter writer, object value)
+        {
+            switch (value)
+            {
+                case int intValue:
+                    writer.Write((byte)1);
+                    writer.Write(intValue);
+                    break;
+                case float floatValue:
+                    writer.Write((byte)2);
+                    writer.Write(floatValue);
+                    break;
+                case double doubleValue:
+                    writer.Write((byte)3);
+                    writer.Write(doubleValue);
+                    break;
+                case bool boolValue:
+                    writer.Write((byte)4);
+                    writer.Write(boolValue);
+                    break;
+                case char charValue:
+                    writer.Write((byte)5);
+                    writer.Write(charValue.ToString());
+                    break;
+                case string stringValue:
+                    writer.Write((byte)6);
+                    writer.Write(stringValue.Length);
+                    writer.Write(stringValue);
+                    break;
+                case object[] arrayValue:
+                    writer.Write((byte)7);
+                    writer.Write(arrayValue.Length);
+                    foreach (var item in arrayValue)
+                    {
+                        SerializeFieldValue(writer, item);
+                    }
+                    break;
+                default:
+                    writer.Write((byte)0);
+                    writer.Write(value.ToString() ?? string.Empty);
+                    break;
+            }
+        }
+
+        private object DeserializeFieldValue(BinaryReader reader)
+        {
+            var typeMarker = reader.ReadByte();
+
+            return typeMarker switch
+            {
+                1 => reader.ReadInt32(),
+                2 => reader.ReadSingle(),
+                3 => reader.ReadDouble(),
+                4 => reader.ReadBoolean(),
+                5 => reader.ReadString(),
+                6 => DeserializeArray(reader),
+                _ => reader.ReadString()
+            };
+        }
+
+        private object[] DeserializeArray(BinaryReader reader)
+        {
+            var length = reader.ReadInt32();
+            var array = new object[length];
+
+            for (var i = 0; i < length; i++)
+            {
+                array[i] = DeserializeFieldValue(reader);
+            }
+
+            return array;
         }
     }
 

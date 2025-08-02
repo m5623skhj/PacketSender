@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using YamlDotNet.Serialization;
 
-namespace PacketSender.PacketLoader
+namespace PacketSender.Packet
 {
     public class PacketField
     {

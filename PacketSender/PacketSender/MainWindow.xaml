@@ -6,6 +6,9 @@
         xmlns:local="clr-namespace:PacketSender"
         mc:Ignorable="d"
         Title="Packet Sender" Height="600" Width="1000">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="300"/>
@@ -94,13 +97,13 @@
 
         <!-- 패킷 상세 정보 (오른쪽) -->
         <DockPanel Grid.Column="2">
-            <TextBlock DockPanel.Dock="Top" Text="Packet Details" FontWeight="Bold" Margin="5" FontSize="14"/>
+            <TextBlock DockPanel.Dock="Top" Text="Packet Instance" FontWeight="Bold" Margin="5" FontSize="14"/>
             <Border BorderBrush="Gray" BorderThickness="1" Margin="5">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
                         <!-- 패킷이 선택되지 않았을 때 -->
                         <TextBlock x:Name="NoSelectionText" 
-                                   Text="Select a packet to view details" 
+                                   Text="Select a packet to create instance" 
                                    FontStyle="Italic" 
                                    Foreground="Gray"
                                    HorizontalAlignment="Center"
@@ -119,19 +122,19 @@
                         </TextBlock>
 
                         <!-- 패킷이 선택되었을 때 -->
-                        <StackPanel x:Name="PacketDetailsPanel">
+                        <StackPanel x:Name="PacketInstancePanel" DataContext="{Binding PacketInstance}">
                             <StackPanel.Style>
                                 <Style TargetType="StackPanel">
                                     <Setter Property="Visibility" Value="Visible"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedPacket}" Value="{x:Null}">
+                                        <DataTrigger Binding="{Binding DataContext.SelectedPacket, RelativeSource={RelativeSource AncestorType=Window}}" Value="{x:Null}">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </StackPanel.Style>
 
-                            <!-- 패킷 기본 정보 -->
+                            <!-- 패킷 정보 (읽기 전용) -->
                             <Grid Margin="0,0,0,15">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -144,23 +147,37 @@
                                 </Grid.ColumnDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Packet Name: " FontWeight="Bold" Margin="0,0,10,5"/>
-                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedPacket.PacketName}" Margin="0,0,0,5"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding PacketName}" Margin="0,0,0,5"/>
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Type: " FontWeight="Bold" Margin="0,0,10,5"/>
-                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedPacket.Type}" Margin="0,0,0,5"/>
+                                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,5">
+                                    <TextBlock Text="{Binding PacketType}"/>
+                                    <TextBlock Text=" (Read Only)" Foreground="Orange" FontWeight="Bold" Margin="10,0,0,0">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding PacketType}" Value="ReplyPacket">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
 
                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Description: " FontWeight="Bold" Margin="0,0,10,0" VerticalAlignment="Top"/>
-                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedPacket.Desc}" TextWrapping="Wrap" Margin="0,0,0,0">
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Description}" TextWrapping="Wrap" Margin="0,0,0,0">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Visible"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding SelectedPacket.Desc}" Value="">
+                                                <DataTrigger Binding="{Binding Description}" Value="">
                                                     <Setter Property="Text" Value="No description available"/>
                                                     <Setter Property="FontStyle" Value="Italic"/>
                                                     <Setter Property="Foreground" Value="Gray"/>
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding SelectedPacket.Desc}" Value="{x:Null}">
+                                                <DataTrigger Binding="{Binding Description}" Value="{x:Null}">
                                                     <Setter Property="Text" Value="No description available"/>
                                                     <Setter Property="FontStyle" Value="Italic"/>
                                                     <Setter Property="Foreground" Value="Gray"/>
@@ -171,57 +188,164 @@
                                 </TextBlock>
                             </Grid>
 
-                            <!-- 패킷 필드들 -->
-                            <TextBlock Text="Fields:" FontWeight="Bold" Margin="0,0,0,5">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SelectedPacket.Items.Count}" Value="0">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
+                            <!-- 필드 값 입력 영역 -->
+                            <StackPanel>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Field Values:" FontWeight="Bold"/>
+                                    <Button Grid.Column="1" Content="Clear All" 
+                                            Command="{Binding ClearFieldsCommand}" 
+                                            Padding="8,3" 
+                                            Margin="0,0,5,0"
+                                            FontSize="11"/>
+                                    <Button Grid.Column="2" Content="Send Packet" 
+                                            Command="{Binding SendPacketCommand}" 
+                                            Padding="10,5" 
+                                            Background="LightBlue"
+                                            FontWeight="Bold"/>
+                                </Grid>
 
-                            <TextBlock Text="No fields defined" FontStyle="Italic" Foreground="Gray">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SelectedPacket.Items.Count}" Value="0">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
+                                <TextBlock Text="No fields to configure" FontStyle="Italic" Foreground="Gray">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Fields.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
 
-                            <ItemsControl ItemsSource="{Binding SelectedPacket.Items}" Margin="10,0,0,0">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border BorderBrush="LightGray" BorderThickness="1" Margin="0,2" Padding="8">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                </Grid.RowDefinitions>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
+                                <ItemsControl ItemsSource="{Binding Fields}" Margin="0,5,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="LightGray" BorderThickness="1" Margin="0,3" Padding="10">
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
 
-                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Name: " FontWeight="Bold" Margin="0,0,10,2"/>
-                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Name}" Margin="0,0,0,2"/>
+                                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Field: " FontWeight="Bold" Margin="0,0,10,3"/>
+                                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Name}" Margin="0,0,0,3"/>
 
-                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Type: " FontWeight="Bold" Margin="0,0,10,0"/>
-                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Type}"/>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Type: " FontWeight="Bold" Margin="0,0,10,3"/>
+                                                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,3">
+                                                        <TextBlock Text="{Binding Type}" Foreground="Gray"/>
+                                                        <TextBlock Text=" (Array)" Foreground="Orange" FontWeight="Bold" Margin="5,0,0,0">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsArray}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </StackPanel>
+
+                                                    <!-- 배열이 아닌 경우 -->
+                                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Value: " FontWeight="Bold" Margin="0,0,10,0" VerticalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsArray}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBox Grid.Row="2" Grid.Column="1" 
+                                                             Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" 
+                                                             Padding="5"
+                                                             FontFamily="Consolas"
+                                                             IsReadOnly="{Binding IsReadOnly}">
+                                                        <TextBox.Style>
+                                                            <Style TargetType="TextBox">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsArray}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IsReadOnly}" Value="True">
+                                                                        <Setter Property="Background" Value="#F0F0F0"/>
+                                                                        <Setter Property="Foreground" Value="#666666"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBox.Style>
+                                                    </TextBox>
+
+                                                    <!-- 배열인 경우 -->
+                                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Array: " FontWeight="Bold" Margin="0,0,10,0" VerticalAlignment="Top">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsArray}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <StackPanel Grid.Row="2" Grid.Column="1">
+                                                        <StackPanel.Style>
+                                                            <Style TargetType="StackPanel">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsArray}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </StackPanel.Style>
+                                                        <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" 
+                                                                 Padding="5"
+                                                                 FontFamily="Consolas"
+                                                                 MinHeight="60"
+                                                                 AcceptsReturn="True"
+                                                                 TextWrapping="Wrap"
+                                                                 IsReadOnly="{Binding IsReadOnly}">
+                                                            <TextBox.Style>
+                                                                <Style TargetType="TextBox">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsReadOnly}" Value="True">
+                                                                            <Setter Property="Background" Value="#F0F0F0"/>
+                                                                            <Setter Property="Foreground" Value="#666666"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBox.Style>
+                                                        </TextBox>
+                                                        <TextBlock Text="Format: [value1, value2, value3] or [&quot;string1&quot;, &quot;string2&quot;]" 
+                                                                   FontSize="10" 
+                                                                   Foreground="Gray" 
+                                                                   Margin="0,2,0,0"
+                                                                   TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
