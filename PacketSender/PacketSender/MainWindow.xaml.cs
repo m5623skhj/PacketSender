@@ -1,14 +1,8 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Collections.ObjectModel;
-using System.Windows;
 using PacketSender.PacketLoader;
 using System.Windows.Threading;
 

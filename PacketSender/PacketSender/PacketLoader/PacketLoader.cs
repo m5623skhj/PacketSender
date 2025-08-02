@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace PacketSender.PacketLoader
 {
@@ -41,7 +40,7 @@ namespace PacketSender.PacketLoader
                 .Build();
 
             var root = deserializer.Deserialize<PacketRoot>(yamlContent);
-            return root?.Packets ?? [];
+            return root.Packets ?? [];
         }
     }
 }
