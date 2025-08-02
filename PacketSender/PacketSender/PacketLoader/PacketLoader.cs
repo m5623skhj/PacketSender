@@ -16,6 +16,7 @@ namespace PacketSender.PacketLoader
     {
         public string Type { get; set; } = string.Empty;
         public string PacketName { get; set; } = string.Empty;
+        public string Desc { get; set; } = string.Empty;
 
         public List<PacketField> Items { get; set; } = [];
     }

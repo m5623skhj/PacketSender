@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PacketSender"
         mc:Ignorable="d"
         Title="Packet Sender" Height="600" Width="1000">
     <Grid>
@@ -135,6 +136,7 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -144,8 +146,29 @@
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Packet Name: " FontWeight="Bold" Margin="0,0,10,5"/>
                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedPacket.PacketName}" Margin="0,0,0,5"/>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Type: " FontWeight="Bold" Margin="0,0,10,0"/>
-                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedPacket.Type}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Type: " FontWeight="Bold" Margin="0,0,10,5"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedPacket.Type}" Margin="0,0,0,5"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Description: " FontWeight="Bold" Margin="0,0,10,0" VerticalAlignment="Top"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedPacket.Desc}" TextWrapping="Wrap" Margin="0,0,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedPacket.Desc}" Value="">
+                                                    <Setter Property="Text" Value="No description available"/>
+                                                    <Setter Property="FontStyle" Value="Italic"/>
+                                                    <Setter Property="Foreground" Value="Gray"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding SelectedPacket.Desc}" Value="{x:Null}">
+                                                    <Setter Property="Text" Value="No description available"/>
+                                                    <Setter Property="FontStyle" Value="Italic"/>
+                                                    <Setter Property="Foreground" Value="Gray"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                             </Grid>
 
                             <!-- 패킷 필드들 -->
