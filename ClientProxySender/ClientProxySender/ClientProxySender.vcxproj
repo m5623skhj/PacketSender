@@ -112,11 +112,13 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>C:\Users\KimHyeongJin\Desktop\Common;C:\Users\KimHyeongJin\source\repos\MultiSocketRUDP\MultiSocketRUDP\Logger;C:\Users\KimHyeongJin\source\repos\MultiSocketRUDP\MultiSocketRUDP\MultiSocketRUDPClient;C:\Users\KimHyeongJin\Desktop\Common\json-develop\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
+      <AdditionalDependencies>MultiSocketRUDPClient.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
