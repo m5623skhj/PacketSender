@@ -3,7 +3,6 @@
 #include "RUDPClientCore.h"
 #include "Logger.h"
 #include "LogExtension.h"
-#include "../ContentsClient/Protocol.h"
 
 TestClient& TestClient::GetInst()
 {
@@ -27,7 +26,7 @@ bool TestClient::Start(const std::wstring& clientCoreOptionFile, const std::wstr
 
 	std::cout << "Client is running" << '\n';
 
-	testThread = std::thread{ &TestClient::RunTestThread, this };
+	testThread = std::jthread{ &TestClient::RunTestThread };
 	return true;
 }
 
@@ -77,4 +76,14 @@ void TestClient::RunTestThread()
 	{
 		Sleep(1000);
 	}
+}
+
+void TestClient::SendPacket(char* streamData, const int streamSize)
+{
+	if (not RUDPClientCore::GetInst().IsConnected())
+	{
+		return;
+	}
+
+	RUDPClientCore::GetInst().SendPacketForTest(streamData, streamSize);
 }

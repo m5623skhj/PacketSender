@@ -143,6 +143,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Client.h" />
+    <ClInclude Include="ClientProxyFunc.h" />
     <ClInclude Include="framework.h" />
   </ItemGroup>
   <ItemGroup>
@@ -153,6 +154,7 @@
     <ClCompile Include="..\..\..\MultiSocketRUDP\MultiSocketRUDP\MultiSocketRUDPClient\RUDPClientCore.cpp" />
     <ClCompile Include="..\..\..\MultiSocketRUDP\MultiSocketRUDP\MultiSocketRUDPClient\SessionGetter.cpp" />
     <ClCompile Include="Client.cpp" />
+    <ClCompile Include="ClientProxyFunc.cpp" />
     <ClCompile Include="dllmain.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

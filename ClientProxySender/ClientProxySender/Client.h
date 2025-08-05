@@ -1,7 +1,6 @@
 #pragma once
 #include <thread>
 #include "NetServerSerializeBuffer.h"
-#include "../ContentsClient/PacketIdType.h"
 #include <mutex>
 #include <set>
 
@@ -21,12 +20,15 @@ public:
 	void Stop();
 	static bool IsConnected();
 
-private:
-	static bool WaitingConnectToServer(unsigned int maximumConnectWaitingCount);
-	void RunTestThread();
+public:
+	static void SendPacket(char* streamData, int streamSize);
 
 private:
-	std::thread testThread;
+	static bool WaitingConnectToServer(unsigned int maximumConnectWaitingCount);
+	static void RunTestThread();
+
+private:
+	std::jthread testThread;
 
 private:
 	std::atomic_int order{ 0 };

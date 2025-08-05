@@ -19,6 +19,9 @@
     <Filter Include="Include">
       <UniqueIdentifier>{154cdee5-85e1-45fd-8dbe-f641b791ca3a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\DLLForTest">
+      <UniqueIdentifier>{2e17ffdf-3528-49b4-a1e1-93187861dc1b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -26,6 +29,9 @@
     </ClInclude>
     <ClInclude Include="Client.h">
       <Filter>Client</Filter>
+    </ClInclude>
+    <ClInclude Include="ClientProxyFunc.h">
+      <Filter>소스 파일\DLLForTest</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -52,6 +58,9 @@
     </ClCompile>
     <ClCompile Include="Client.cpp">
       <Filter>Client</Filter>
+    </ClCompile>
+    <ClCompile Include="ClientProxyFunc.cpp">
+      <Filter>소스 파일\DLLForTest</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
