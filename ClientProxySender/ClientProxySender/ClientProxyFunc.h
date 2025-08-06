@@ -3,17 +3,17 @@
 class ClientProxyFunc
 {
 public:
-	static void Start(const std::wstring& clientCoreOptionFile, const std::wstring& sessionGetterOptionFile);
+	static bool Start(const std::wstring& clientCoreOptionFile, const std::wstring& sessionGetterOptionFile);
 	static void Stop();
 	static bool IsConnected();
 	static bool SendPacket(char* streamData, int streamSize);
 };
 
-extern  "C"
+extern "C"
 {
-	inline __declspec(dllexport) void Start(const wchar_t* clientCoreOptionFile, const wchar_t* sessionGetterOptionFile)
+	inline __declspec(dllexport) bool Start(const wchar_t* clientCoreOptionFile, const wchar_t* sessionGetterOptionFile)
 	{
-		ClientProxyFunc::Start(clientCoreOptionFile, sessionGetterOptionFile);
+		return ClientProxyFunc::Start(clientCoreOptionFile, sessionGetterOptionFile);
 	}
 
 	inline __declspec(dllexport) void Stop()

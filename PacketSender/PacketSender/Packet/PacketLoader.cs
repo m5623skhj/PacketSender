@@ -7,9 +7,8 @@ namespace PacketSender.Packet
     {
         public string Type { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
-        
-        [YamlMember(Alias = "Items")]
-        public List<PacketField> Fields { get; set; } = [];
+
+        [YamlMember(Alias = "Items")] public List<PacketField> Fields { get; set; } = [];
     }
 
     public class PacketDefinition
@@ -17,14 +16,14 @@ namespace PacketSender.Packet
         public string Type { get; set; } = string.Empty;
         public string PacketName { get; set; } = string.Empty;
         public string Desc { get; set; } = string.Empty;
+        public int PacketId { get; set; }
 
         public List<PacketField> Items { get; set; } = [];
     }
 
     public class PacketRoot
     {
-        [YamlMember(Alias = "Packet")]
-        public List<PacketDefinition>? Packets { get; set; } = [];
+        [YamlMember(Alias = "Packet")] public List<PacketDefinition>? Packets { get; set; } = [];
     }
 
     public static class PacketYamlLoader
@@ -41,7 +40,19 @@ namespace PacketSender.Packet
                 .Build();
 
             var root = deserializer.Deserialize<PacketRoot>(yamlContent);
-            return root.Packets ?? [];
+            var packets = root.Packets ?? [];
+
+            AssignPacketIds(packets);
+
+            return packets;
+        }
+
+        public static void AssignPacketIds(List<PacketDefinition> packets, int startId = 1)
+        {
+            for (var i = 0; i < packets.Count; i++)
+            {
+                packets[i].PacketId = startId + i;
+            }
         }
     }
 }

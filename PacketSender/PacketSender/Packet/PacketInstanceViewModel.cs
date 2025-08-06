@@ -178,7 +178,7 @@ namespace PacketSender.ViewModels
                 packetData[field.Name] = convertedValue;
             }
 
-            PacketSendRequested?.Invoke(packetData);
+            PacketSendRequested?.Invoke(_packetDefinition.PacketId, packetData);
         }
 
         private object ConvertValue(string value, string type)
@@ -346,7 +346,7 @@ namespace PacketSender.ViewModels
             };
         }
 
-        public event Action<Dictionary<string, object>>? PacketSendRequested;
+        public event Action<int, Dictionary<string, object>>? PacketSendRequested;
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)

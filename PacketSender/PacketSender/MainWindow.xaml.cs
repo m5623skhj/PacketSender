@@ -8,6 +8,7 @@ using PacketSender.Packet;
 using PacketSender.ViewModels;
 using System.Text;
 using System.IO;
+using PacketSender.DLL;
 
 namespace PacketSender
 {
@@ -53,7 +54,7 @@ namespace PacketSender
         {
             InitializeComponent();
             PacketInstance = new PacketInstanceViewModel();
-            PacketInstance.PacketSendRequested += OnPacketSendRequested;
+            PacketInstance.PacketSendRequested += OnPacketSendRequest;
 
             DataContext = this;
 
@@ -68,6 +69,12 @@ namespace PacketSender
             };
 
             ClearSearchCommand = new RelayCommand(ClearSearch);
+            ClientProxySender.Instance.LoadClientProxySenderDll();
+            if (ClientProxySender.Instance.Start("CoreOption.txt", "SessionGetterOption.txt") == false)
+            {
+                MessageBox.Show("Failed to start ClientProxySender. Run non send packet mode.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+
             LoadPackets();
         }
 
@@ -130,25 +137,31 @@ namespace PacketSender
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        private void OnPacketSendRequested(Dictionary<string, object> fieldValues)
+        private void OnPacketSendRequest(int packetId, Dictionary<string, object> fieldValues)
         {
             try
             {
-                var binarySerialized = SerializeToBinary(fieldValues);
-                MessageBox.Show("Packet serialized successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                // SendPacketToServer(binarySerialized);
+                var binarySerialized = SerializeToBinary(packetId, fieldValues);
+                if (binarySerialized.Length == 0)
+                {
+                    MessageBox.Show("No data to send.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                ClientProxySender.Instance.SendPacket(binarySerialized);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Serialization error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"SendPacketRequest error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private byte[] SerializeToBinary(Dictionary<string, object> fieldValues)
+        private byte[] SerializeToBinary(int packetId, Dictionary<string, object> fieldValues)
         {
             using var stream = new MemoryStream();
             using var writer = new BinaryWriter(stream, Encoding.UTF8);
-            
+
+            writer.Write(packetId);
             foreach (var field in fieldValues)
             {
                 SerializeFieldValue(writer, field.Value);
@@ -161,41 +174,23 @@ namespace PacketSender
         {
             switch (value)
             {
-                case int intValue:
-                    writer.Write((byte)1);
-                    writer.Write(intValue);
+                case int v: writer.Write(v); break;
+                case float v: writer.Write(v); break;
+                case double v: writer.Write(v); break;
+                case bool v: writer.Write(v); break;
+                case char v: writer.Write(v); break;
+                case string v:
+                    writer.Write(v.Length);
+                    writer.Write(v);
                     break;
-                case float floatValue:
-                    writer.Write((byte)2);
-                    writer.Write(floatValue);
-                    break;
-                case double doubleValue:
-                    writer.Write((byte)3);
-                    writer.Write(doubleValue);
-                    break;
-                case bool boolValue:
-                    writer.Write((byte)4);
-                    writer.Write(boolValue);
-                    break;
-                case char charValue:
-                    writer.Write((byte)5);
-                    writer.Write(charValue.ToString());
-                    break;
-                case string stringValue:
-                    writer.Write((byte)6);
-                    writer.Write(stringValue.Length);
-                    writer.Write(stringValue);
-                    break;
-                case object[] arrayValue:
-                    writer.Write((byte)7);
-                    writer.Write(arrayValue.Length);
-                    foreach (var item in arrayValue)
+                case object[] v:
+                    writer.Write(v.Length);
+                    foreach (var item in v)
                     {
                         SerializeFieldValue(writer, item);
                     }
                     break;
                 default:
-                    writer.Write((byte)0);
                     writer.Write(value.ToString() ?? string.Empty);
                     break;
             }

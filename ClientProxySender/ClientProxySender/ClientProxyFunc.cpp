@@ -2,9 +2,9 @@
 #include "ClientProxyFunc.h"
 #include "Client.h"
 
-void ClientProxyFunc::Start(const std::wstring& clientCoreOptionFile, const std::wstring& sessionGetterOptionFile)
+bool ClientProxyFunc::Start(const std::wstring& clientCoreOptionFile, const std::wstring& sessionGetterOptionFile)
 {
-	TestClient::GetInst().Start(clientCoreOptionFile, sessionGetterOptionFile);
+	return TestClient::GetInst().Start(clientCoreOptionFile, sessionGetterOptionFile);
 }
 
 void ClientProxyFunc::Stop()
