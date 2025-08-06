@@ -1,59 +1,164 @@
 ﻿using System.Runtime.InteropServices;
 
-public class DLLSender
+namespace PacketSender.DLL
 {
-    private static readonly DLLSender _instance = new DLLSender();
-    public static DLLSender Instance => _instance;
-
-    private IntPtr _dllHandle = IntPtr.Zero;
-    private SendPacketDelegate? _sendPacket;
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private delegate void SendPacketDelegate(string data);
-
-    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    private static extern IntPtr LoadLibrary(string lpFileName);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
-
-    [DllImport("kernel32.dll")]
-    private static extern bool FreeLibrary(IntPtr hModule);
-
-    private DLLSender() { }
-
-    public bool LoadSenderLibrary(string dllName)
+    public class ClientProxySender
     {
-        if (_dllHandle != IntPtr.Zero)
+        public static ClientProxySender Instance { get; } = new();
+
+        private IntPtr _dllHandle = IntPtr.Zero;
+        private StartDelegate? _start;
+        private StopDelegate? _stop;
+        private IsConnectedDelegate? _isConnected;
+        private SendPacketDelegate? _sendPacket;
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate bool StartDelegate(
+            [MarshalAs(UnmanagedType.LPWStr)] string clientCoreOptionFile,
+            [MarshalAs(UnmanagedType.LPWStr)] string sessionGetterOptionFile);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate void StopDelegate();
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate bool IsConnectedDelegate();
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate bool SendPacketDelegate(IntPtr streamData, int streamSize);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern IntPtr LoadLibrary(string lpFileName);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
+
+        [DllImport("kernel32.dll")]
+        private static extern bool FreeLibrary(IntPtr hModule);
+
+        private ClientProxySender() { }
+
+        public bool LoadClientProxySenderDll(string dllPath = "ClientProxySender.dll")
         {
+            UnloadLibrary();
+
+            _dllHandle = LoadLibrary(dllPath);
+            if (_dllHandle == IntPtr.Zero)
+            {
+                var error = Marshal.GetLastWin32Error();
+                throw new Exception($"DLL 로드 실패: {dllPath}, Error Code: {error}");
+            }
+
+            try
+            {
+                var startPtr = GetProcAddress(_dllHandle, "Start");
+                if (startPtr == IntPtr.Zero)
+                {
+                    throw new Exception("Can't find Start()");
+                }
+                _start = Marshal.GetDelegateForFunctionPointer<StartDelegate>(startPtr);
+
+                var stopPtr = GetProcAddress(_dllHandle, "Stop");
+                if (stopPtr == IntPtr.Zero)
+                {
+                    throw new Exception("Can't find Stop()");
+                }
+                _stop = Marshal.GetDelegateForFunctionPointer<StopDelegate>(stopPtr);
+
+                var isConnectedPtr = GetProcAddress(_dllHandle, "IsConnected");
+                if (isConnectedPtr == IntPtr.Zero)
+                {
+                    throw new Exception("Can't find IsConnected()");
+                }
+                _isConnected = Marshal.GetDelegateForFunctionPointer<IsConnectedDelegate>(isConnectedPtr);
+
+                var sendPacketPtr = GetProcAddress(_dllHandle, "SendPacket");
+                if (sendPacketPtr == IntPtr.Zero)
+                {
+                    throw new Exception("Can't find SendPacket()");
+                }
+                _sendPacket = Marshal.GetDelegateForFunctionPointer<SendPacketDelegate>(sendPacketPtr);
+
+                return true;
+            }
+            catch
+            {
+                UnloadLibrary();
+                throw;
+            }
+        }
+
+        public void UnloadLibrary()
+        {
+            if (_dllHandle == IntPtr.Zero)
+            {
+                return;
+            }
+
             FreeLibrary(_dllHandle);
             _dllHandle = IntPtr.Zero;
+            _start = null;
+            _stop = null;
+            _isConnected = null;
             _sendPacket = null;
         }
 
-        _dllHandle = LoadLibrary(dllName);
-        if (_dllHandle == IntPtr.Zero)
+        public bool Start(string clientCoreOptionFile, string sessionGetterOptionFile)
         {
-            throw new Exception("DLL load failed");
+            if (_start == null)
+            {
+                throw new InvalidOperationException("Dll is unloaded, need LoadLibrary() first");
+            }
+
+            return _start.Invoke(clientCoreOptionFile, sessionGetterOptionFile);
         }
 
-        IntPtr procAddress = GetProcAddress(_dllHandle, "SendPacket");
-        if (procAddress == IntPtr.Zero)
+        public void Stop()
         {
-            throw new Exception("SendPacket function find failed");
+            if (_stop == null)
+            {
+                throw new InvalidOperationException("Dll is unloaded, need LoadLibrary() first");
+            }
+
+            _stop.Invoke();
         }
 
-        _sendPacket = Marshal.GetDelegateForFunctionPointer<SendPacketDelegate>(procAddress);
-        return true;
-    }
-
-    public void SendPacket(string data)
-    {
-        if (_sendPacket == null)
+        public bool IsConnected()
         {
-            throw new InvalidOperationException("SendPacket function not loaded");
+            if (_isConnected == null)
+            {
+                throw new InvalidOperationException("Dll is unloaded, need LoadLibrary() first");
+            }
+
+            return _isConnected.Invoke();
         }
 
-        _sendPacket.Invoke(data);
+        public bool SendPacket(byte[] data)
+        {
+            if (_sendPacket == null)
+            {
+                throw new InvalidOperationException("Dll is unloaded, need LoadLibrary() first");
+            }
+
+            if (data.Length == 0)
+            {
+                return false;
+            }
+
+            var dataPtr = Marshal.AllocHGlobal(data.Length);
+            try
+            {
+                Marshal.Copy(data, 0, dataPtr, data.Length);
+                return _sendPacket.Invoke(dataPtr, data.Length);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(dataPtr);
+            }
+        }
+
+        ~ClientProxySender()
+        {
+            UnloadLibrary();
+        }
     }
 }
