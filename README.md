@@ -48,6 +48,14 @@ s (string) : "TestCode!"
 
 ---
 
+## 테스트 프로젝트
+
+- 테스트를 위하여 https://github.com/m5623skhj/MultiSocketRUDP[MultiSocketRUDP]를 사용하여 통신 테스트 중
+- MultiSocketRUDP/ClientCore 라이브러리가 C++로 작성되어 있어서, Dll을 통해 프록시를 구성하고, C# 코드에서 해당 DLL의 함수를 호출하여 통신하도록 구성
+- 위 내용은 ClientProxySender에서 구현 중
+
+---
+
 ## TODO (향후 계획)
 
 - [✅] 패킷 직렬화/역직렬화 
