@@ -13,23 +13,13 @@
 3. **패킷 필드에 값 입력 UI 제공**
 4. **사용자가 구성한 패킷을 서버로 송신**
 
+
 예시:
-```cpp
-class TestPacket {
-public:
-  int a;
-  int b;
-  std::string s;
-};
-```
+cpp class:   
+<img width="371" height="244" alt="image" src="https://github.com/user-attachments/assets/237a9391-b893-49cc-a596-7ad65fcf2b43" />
 
 → GUI 출력:
-```
-Target class name: TestPacket
-a (int)    : 10
-b (int)    : 20
-s (string) : "TestCode!"
-```
+<img width="983" height="588" alt="image" src="https://github.com/user-attachments/assets/01d7e85a-a914-42b1-a325-ab12736debec" />
 
 ---
 
