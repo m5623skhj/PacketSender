@@ -180,11 +180,12 @@ namespace PacketSender
                 case bool v: writer.Write(v); break;
                 case char v: writer.Write(v); break;
                 case string v:
-                    writer.Write(v.Length);
-                    writer.Write(v);
+                    writer.Write((ushort)v.Length);
+                    var bytes = System.Text.Encoding.UTF8.GetBytes(v);
+                    writer.Write(bytes);
                     break;
                 case object[] v:
-                    writer.Write(v.Length);
+                    writer.Write((short)v.Length);
                     foreach (var item in v)
                     {
                         SerializeFieldValue(writer, item);
