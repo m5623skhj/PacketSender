@@ -21,6 +21,10 @@ cpp class:
 → GUI 출력:
 <img width="983" height="588" alt="image" src="https://github.com/user-attachments/assets/01d7e85a-a914-42b1-a325-ab12736debec" />
 
+- 송신한 패킷 로그 출력
+  - UI, 파일에 출력되며, 파일 로그는 실행 파일 위치/Logs 폴더에 출력됩니다.
+<img width="1181" height="305" alt="image" src="https://github.com/user-attachments/assets/7381bfbc-415d-47b2-b633-c0cea7ce928f" />
+
 ---
 
 ## 왜 필요하다고 생각했는가?
@@ -49,6 +53,6 @@ cpp class:
 ## TODO (향후 계획)
 
 - [✅] 패킷 직렬화/역직렬화 
-- [ ] 송수신 로그 기능  
+- [✅] 송수신 로그 기능  
 - [ ] 반복 전송 및 스크립트 지원 (간단한 봇 테스트)  
 - [ ] 서버 응답 패킷 시각화  
