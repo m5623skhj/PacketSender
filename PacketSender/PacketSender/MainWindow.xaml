@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PacketSender"
         mc:Ignorable="d"
-        Title="Packet Sender" Height="600" Width="1000">
+        Title="Packet Sender" Height="900" Width="1200">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </Window.Resources>
@@ -15,9 +15,14 @@
             <ColumnDefinition Width="5"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="5"/>
+            <RowDefinition Height="300" MinHeight="150"/>
+        </Grid.RowDefinitions>
 
         <!-- 패킷 목록 (왼쪽) -->
-        <DockPanel Grid.Column="0">
+        <DockPanel Grid.Row="0" Grid.Column="0">
             <TextBlock DockPanel.Dock="Top" Text="Packet List" FontWeight="Bold" Margin="5" FontSize="14"/>
 
             <!-- 검색 박스 -->
@@ -93,10 +98,10 @@
         </DockPanel>
 
         <!-- 구분선 -->
-        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="LightGray"/>
+        <GridSplitter Grid.Row="0" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="LightGray"/>
 
         <!-- 패킷 상세 정보 (오른쪽) -->
-        <DockPanel Grid.Column="2">
+        <DockPanel Grid.Row="0" Grid.Column="2">
             <TextBlock DockPanel.Dock="Top" Text="Packet Instance" FontWeight="Bold" Margin="5" FontSize="14"/>
             <Border BorderBrush="Gray" BorderThickness="1" Margin="5">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -348,6 +353,45 @@
                             </StackPanel>
                         </StackPanel>
                     </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </DockPanel>
+
+        <!-- 수평 구분선 -->
+        <GridSplitter Grid.Row="1" Grid.ColumnSpan="3" Height="5" HorizontalAlignment="Stretch" Background="LightGray"/>
+
+        <!-- 로그 패널 (새로 추가된 부분) -->
+        <DockPanel Grid.Row="2" Grid.ColumnSpan="3">
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="5" Background="#f8f8f8">
+                <TextBlock Text="📋 Packet Send Log" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="5"/>
+                <Button Content="Clear Log" Margin="10,3,0,3" Padding="8,3" Command="{Binding ClearLogCommand}"
+                        Background="LightCoral" Foreground="White" FontWeight="Bold"/>
+                <TextBlock Text="|" Margin="10,0" VerticalAlignment="Center" Foreground="Gray"/>
+                <TextBlock Text="Real-time packet transmission monitoring" FontSize="11" VerticalAlignment="Center" Foreground="Gray"/>
+            </StackPanel>
+            <Border BorderBrush="Gray" BorderThickness="1" Margin="5">
+                <ScrollViewer Name="LogScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                    <TextBox Text="{Binding LogText}" 
+                             IsReadOnly="True" 
+                             FontFamily="Consolas" 
+                             FontSize="11"
+                             Background="#1e1e1e"
+                             Foreground="#00ff00"
+                             BorderThickness="0"
+                             TextWrapping="NoWrap"
+                             Padding="10"
+                             ScrollViewer.CanContentScroll="True">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding LogText}" Value="">
+                                        <Setter Property="Background" Value="White"/>
+                                        <Setter Property="Foreground" Value="Gray"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
                 </ScrollViewer>
             </Border>
         </DockPanel>

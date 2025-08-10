@@ -7,8 +7,6 @@ namespace PacketSender.Packet
     {
         public string Type { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
-
-        [YamlMember(Alias = "Items")] public List<PacketField> Fields { get; set; } = [];
     }
 
     public class PacketDefinition

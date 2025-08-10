@@ -119,7 +119,7 @@ namespace PacketSender.ViewModels
         public ICommand SendPacketCommand { get; }
         public ICommand ClearFieldsCommand { get; }
 
-        private bool _isReadOnly { get; set; }
+        private bool IsReadOnly { get; set; }
 
         public PacketInstanceViewModel()
         {
@@ -146,7 +146,7 @@ namespace PacketSender.ViewModels
             PacketName = packet.PacketName;
             PacketType = packet.Type;
             Description = packet.Desc;
-            _isReadOnly = PacketType == "ReplyPacket";
+            IsReadOnly = PacketType == "ReplyPacket";
 
             foreach (var field in packet.Items)
             {
@@ -160,7 +160,7 @@ namespace PacketSender.ViewModels
 
         private bool CanSendPacket()
         {
-            return _packetDefinition != null && (_isReadOnly == false);
+            return _packetDefinition != null && (IsReadOnly == false);
         }
 
         private void SendPacket()
@@ -234,12 +234,12 @@ namespace PacketSender.ViewModels
 
         }
 
-        private object ParseArrayValue(string value, string elementType)
+        public object ParseArrayValue(string value, string elementType)
         {
             try
             {
                 value = value.Trim();
-                if (!value.StartsWith($"[") || !value.EndsWith($"]"))
+                if (!"[".StartsWith(value) || !value.EndsWith($"]"))
                 {
                     return Array.Empty<object>();
                 }

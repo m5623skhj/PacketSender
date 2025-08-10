@@ -9,6 +9,7 @@ using PacketSender.ViewModels;
 using System.Text;
 using System.IO;
 using PacketSender.DLL;
+using System.Windows.Controls;
 
 namespace PacketSender
 {
@@ -49,6 +50,23 @@ namespace PacketSender
 
         public ICommand ClearSearchCommand { get; }
         public PacketInstanceViewModel PacketInstance { get; }
+        private readonly StringBuilder _logBuilder = new();
+        private string _logText = string.Empty;
+        private ScrollViewer? _logScrollViewer;
+
+        public string LogText
+        {
+            get => _logText;
+            set
+            {
+                _logText = value;
+                OnPropertyChanged();
+
+                Dispatcher.BeginInvoke(new Action(ScrollToBottom), DispatcherPriority.Background);
+            }
+        }
+
+        public ICommand ClearLogCommand { get; private set; }
 
         public MainWindow()
         {
@@ -69,6 +87,8 @@ namespace PacketSender
             };
 
             ClearSearchCommand = new RelayCommand(ClearSearch);
+            ClearLogCommand = new RelayCommand(ClearLog);
+
             ClientProxySender.Instance.LoadClientProxySenderDll();
             if (ClientProxySender.Instance.Start("CoreOption.txt", "SessionGetterOption.txt") == false)
             {
@@ -76,6 +96,11 @@ namespace PacketSender
             }
 
             LoadPackets();
+
+            this.Loaded += (_, _) =>
+            {
+                _logScrollViewer = FindLogScrollViewer();
+            };
         }
 
         private void LoadPackets()
@@ -148,10 +173,14 @@ namespace PacketSender
                     return;
                 }
 
+                LogPacketToUi(packetId, fieldValues, binarySerialized);
+                LogPacketToFileAsync(packetId, fieldValues, binarySerialized);
+
                 ClientProxySender.Instance.SendPacket(binarySerialized);
             }
             catch (Exception ex)
             {
+                LogErrorToUi($"SendPacketRequest error: {ex.Message}");
                 MessageBox.Show($"SendPacketRequest error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -181,7 +210,7 @@ namespace PacketSender
                 case char v: writer.Write(v); break;
                 case string v:
                     writer.Write((ushort)v.Length);
-                    var bytes = System.Text.Encoding.UTF8.GetBytes(v);
+                    var bytes = Encoding.UTF8.GetBytes(v);
                     writer.Write(bytes);
                     break;
                 case object[] v:
@@ -224,6 +253,154 @@ namespace PacketSender
             }
 
             return array;
+        }
+
+        private void LogPacketToUi(int packetId, Dictionary<string, object> fieldValues, byte[] binaryData)
+        {
+            var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+
+            _logBuilder.AppendLine($"[{timestamp}] === PACKET SENT ===");
+            _logBuilder.AppendLine($"Packet ID: {packetId}");
+            _logBuilder.AppendLine($"Packet Name: {SelectedPacket?.PacketName ?? "Unknown"}");
+            _logBuilder.AppendLine($"Binary Size: {binaryData.Length} bytes");
+
+            _logBuilder.AppendLine("Fields:");
+            foreach (var field in fieldValues)
+            {
+                var valueStr = FormatFieldValue(field.Value);
+                _logBuilder.AppendLine($"  {field.Key}: {valueStr}");
+            }
+
+            _logBuilder.AppendLine($"Hex: {BitConverter.ToString(binaryData).Replace("-", " ")}");
+            _logBuilder.AppendLine();
+
+            Dispatcher.Invoke(() =>
+            {
+                LogText = _logBuilder.ToString();
+
+                if (_logBuilder.Length <= 100000)
+                {
+                    return;
+                }
+
+                var lines = LogText.Split('\n');
+                var keepLines = lines.Skip(Math.Max(0, lines.Length - 500)).ToArray();
+                _logBuilder.Clear();
+                _logBuilder.AppendLine("[LOG TRUNCATED - Showing recent 500 lines]");
+                _logBuilder.AppendLine();
+                foreach (var line in keepLines)
+                {
+                    _logBuilder.AppendLine(line);
+                }
+                LogText = _logBuilder.ToString();
+            });
+        }
+
+        private void LogErrorToUi(string errorMessage)
+        {
+            var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+            _logBuilder.AppendLine($"[{timestamp}] ❌ ERROR: {errorMessage}");
+            _logBuilder.AppendLine();
+
+            Dispatcher.Invoke(() =>
+            {
+                LogText = _logBuilder.ToString();
+            });
+        }
+
+        private void ClearLog()
+        {
+            _logBuilder.Clear();
+            LogText = string.Empty;
+            Console.WriteLine("Log cleared successfully");
+        }
+
+        private ScrollViewer? FindLogScrollViewer()
+        {
+            return FindName("LogScrollViewer") as ScrollViewer;
+        }
+
+        private static string FormatFieldValue(object value)
+        {
+            return value switch
+            {
+                object[] array => $"[{string.Join(", ", array.Select(FormatFieldValue))}]",
+                string str => $"\"{str}\"",
+                _ => value.ToString() ?? "null"
+            };
+        }
+
+        private void ScrollToBottom()
+        {
+            try
+            {
+                _logScrollViewer?.ScrollToEnd();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Scroll error: {ex.Message}");
+            }
+        }
+
+        private static string GetLogFilePath()
+        {
+            var exeDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? Directory.GetCurrentDirectory();
+            return Path.Combine(exeDirectory, "Logs", $"PacketLog_{DateTime.Now:yyyyMMdd}.txt");
+        }
+
+        private static void EnsureLogDirectory()
+        {
+            try
+            {
+                var logFilePath = GetLogFilePath();
+                var logDir = Path.GetDirectoryName(logFilePath);
+
+                if (string.IsNullOrEmpty(logDir) || Directory.Exists(logDir))
+                {
+                    return;
+                }
+
+                Directory.CreateDirectory(logDir);
+                Console.WriteLine($"Log directory created: {logDir}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to create log directory: {ex.Message}");
+            }
+        }
+
+        private async void LogPacketToFileAsync(int packetId, Dictionary<string, object> fieldValues, byte[] binaryData)
+        {
+            try
+            {
+                EnsureLogDirectory();
+                var logFilePath = GetLogFilePath();
+
+                var logEntry = new StringBuilder();
+                logEntry.AppendLine($"=== PACKET SENT at {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} ===");
+                logEntry.AppendLine($"Packet ID: {packetId}");
+                logEntry.AppendLine($"Packet Name: {SelectedPacket?.PacketName ?? "Unknown"}");
+                logEntry.AppendLine($"Binary Size: {binaryData.Length} bytes");
+
+                logEntry.AppendLine("Field Values:");
+                foreach (var field in fieldValues)
+                {
+                    var valueStr = FormatFieldValue(field.Value);
+                    logEntry.AppendLine($"  {field.Key}: {valueStr}");
+                }
+
+                logEntry.AppendLine($"Binary Data (Hex): {BitConverter.ToString(binaryData).Replace("-", " ")}");
+                logEntry.AppendLine($"Binary Data (Base64): {Convert.ToBase64String(binaryData)}");
+                logEntry.AppendLine();
+
+                await File.AppendAllTextAsync(logFilePath, logEntry.ToString());
+                Console.WriteLine($"Log written to file: {logFilePath}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to write log to file: {ex.Message}");
+                LogErrorToUi($"File log error: {ex.Message}");
+            }
         }
     }
 
