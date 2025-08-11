@@ -7,6 +7,7 @@ public:
 	static void Stop();
 	static bool IsConnected();
 	static bool SendPacket(char* streamData, int streamSize);
+	static bool GetStreamDataFromStoredPacket(char* outStreamData, int* outStreamSize, int inStreamMaxSize);
 };
 
 extern "C"
@@ -29,5 +30,10 @@ extern "C"
 	inline __declspec(dllexport) bool SendPacket(char* streamData, const int streamSize)
 	{
 		return ClientProxyFunc::SendPacket(streamData, streamSize);
+	}
+
+	inline __declspec(dllexport) bool GetStreamDataFromStoredPacket(char* outStreamData, int* outStreamSize, const int inStreamMaxSize)
+	{
+		return ClientProxyFunc::GetStreamDataFromStoredPacket(outStreamData, outStreamSize, inStreamMaxSize);
 	}
 }

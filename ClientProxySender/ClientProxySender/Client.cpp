@@ -26,16 +26,11 @@ bool TestClient::Start(const std::wstring& clientCoreOptionFile, const std::wstr
 
 	std::cout << "Client is running" << '\n';
 
-	testThread = std::jthread{ &TestClient::RunTestThread };
 	return true;
 }
 
 void TestClient::Stop()
 {
-	if (testThread.joinable())
-	{
-		testThread.join();
-	}
 	RUDPClientCore::GetInst().Stop();
 }
 
@@ -65,19 +60,6 @@ bool TestClient::WaitingConnectToServer(const unsigned int maximumConnectWaiting
 	return true;
 }
 
-void TestClient::RunTestThread()
-{
-	if (not WaitingConnectToServer(10))
-	{
-		return;
-	}
-
-	while (RUDPClientCore::GetInst().IsConnected())
-	{
-		Sleep(1000);
-	}
-}
-
 void TestClient::SendPacket(char* streamData, const int streamSize)
 {
 	if (not RUDPClientCore::GetInst().IsConnected())
@@ -86,4 +68,34 @@ void TestClient::SendPacket(char* streamData, const int streamSize)
 	}
 
 	RUDPClientCore::GetInst().SendPacketForTest(streamData, streamSize);
+}
+
+bool TestClient::GetStreamDataFromStoredPacket(char* outStreamData, int* outStreamSize, const int inStreamMaxSize)
+{
+	if (RUDPClientCore::GetInst().GetRemainPacketSize() == 0)
+	{
+		*outStreamSize = 0;
+		return true;
+	}
+
+	NetBuffer* receivedPacket = RUDPClientCore::GetInst().GetReceivedPacket();
+	if (receivedPacket == nullptr)
+	{
+		*outStreamSize = 0;
+		return false;
+	}
+
+	const int useSize = receivedPacket->GetUseSize();
+	if (inStreamMaxSize < useSize)
+	{
+		*outStreamSize = 0;
+		return false;
+	}
+
+	*outStreamSize = useSize;
+	receivedPacket->ReadBuffer(outStreamData, useSize);
+
+	NetBuffer::Free(receivedPacket);
+
+	return true;
 }

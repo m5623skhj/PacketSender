@@ -27,3 +27,13 @@ bool ClientProxyFunc::SendPacket(char* streamData, const int streamSize)
 	TestClient::SendPacket(streamData, streamSize);
 	return true;
 }
+
+bool ClientProxyFunc::GetStreamDataFromStoredPacket(char* outStreamData, int* outStreamSize, int inStreamMaxSize)
+{
+	if (not TestClient::IsConnected())
+	{
+		return false;
+	}
+
+	return TestClient::GetInst().GetStreamDataFromStoredPacket(outStreamData, outStreamSize, inStreamMaxSize);
+}

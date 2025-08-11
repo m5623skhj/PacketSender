@@ -16,19 +16,16 @@ public:
 	static TestClient& GetInst();
 
 public:
-	bool Start(const std::wstring& clientCoreOptionFile, const std::wstring& sessionGetterOptionFile);
-	void Stop();
+	static bool Start(const std::wstring& clientCoreOptionFile, const std::wstring& sessionGetterOptionFile);
+	static void Stop();
 	static bool IsConnected();
 
 public:
 	static void SendPacket(char* streamData, int streamSize);
+	static bool GetStreamDataFromStoredPacket(char* outStreamData, int* outStreamSize, int inStreamMaxSize);
 
 private:
 	static bool WaitingConnectToServer(unsigned int maximumConnectWaitingCount);
-	static void RunTestThread();
-
-private:
-	std::jthread testThread;
 
 private:
 	std::atomic_int order{ 0 };
