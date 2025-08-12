@@ -127,7 +127,7 @@
                         </TextBlock>
 
                         <!-- 패킷이 선택되었을 때 -->
-                        <StackPanel x:Name="PacketInstancePanel" DataContext="{Binding PacketInstance}">
+                        <StackPanel x:Name="PacketInstancePanel" DataContext="{Binding PacketViewModel}">
                             <StackPanel.Style>
                                 <Style TargetType="StackPanel">
                                     <Setter Property="Visibility" Value="Visible"/>

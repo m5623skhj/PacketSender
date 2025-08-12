@@ -11,6 +11,7 @@ namespace PacketSender.DLL
         private StopDelegate? _stop;
         private IsConnectedDelegate? _isConnected;
         private SendPacketDelegate? _sendPacket;
+        private GetStreamDataFromStoredPacketDelegate? _getStreamDataFromStoredPacketDelete;
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate bool StartDelegate(
@@ -25,6 +26,9 @@ namespace PacketSender.DLL
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate bool SendPacketDelegate(IntPtr streamData, int streamSize);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate bool GetStreamDataFromStoredPacketDelegate(IntPtr outStreamData, ref int outStreamSize, int streamSize);
 
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         private static extern IntPtr LoadLibrary(string lpFileName);
@@ -78,6 +82,13 @@ namespace PacketSender.DLL
                 }
                 _sendPacket = Marshal.GetDelegateForFunctionPointer<SendPacketDelegate>(sendPacketPtr);
 
+                var getStreamDataPtr = GetProcAddress(_dllHandle, "GetStreamDataFromStoredPacket");
+                if (getStreamDataPtr == IntPtr.Zero)
+                {
+                    throw new Exception("Can't find GetStreamDataFromStoredPacket()");
+                }
+                _getStreamDataFromStoredPacketDelete = Marshal.GetDelegateForFunctionPointer<GetStreamDataFromStoredPacketDelegate>(getStreamDataPtr);
+
                 return true;
             }
             catch
@@ -100,6 +111,7 @@ namespace PacketSender.DLL
             _stop = null;
             _isConnected = null;
             _sendPacket = null;
+            _getStreamDataFromStoredPacketDelete = null;
         }
 
         public bool Start(string clientCoreOptionFile, string sessionGetterOptionFile)
@@ -153,6 +165,42 @@ namespace PacketSender.DLL
             finally
             {
                 Marshal.FreeHGlobal(dataPtr);
+            }
+        }
+
+        public bool GetStreamDataFromStoredPacket(out byte[]? streamData, int maxBufferSize = 4096)
+        {
+            if (_getStreamDataFromStoredPacketDelete == null)
+            {
+                throw new InvalidOperationException("Dll is unloaded, need LoadLibrary() first");
+            }
+
+            streamData = null;
+            var buffer = Marshal.AllocHGlobal(maxBufferSize);
+            var actualSize = 0;
+
+            try
+            {
+                var result = _getStreamDataFromStoredPacketDelete.Invoke(buffer, ref actualSize, maxBufferSize);
+
+                if (!result || actualSize <= 0)
+                {
+                    return result;
+                }
+
+                streamData = new byte[actualSize];
+                Marshal.Copy(buffer, streamData, 0, actualSize);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"GetStreamDataFromStoredPacket error: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(buffer);
             }
         }
 

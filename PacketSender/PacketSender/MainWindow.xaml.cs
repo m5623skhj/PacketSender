@@ -16,9 +16,10 @@ namespace PacketSender
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
         private readonly DispatcherTimer _searchTimer;
+        private readonly CancellationTokenSource _cancellationTokenSource;
+        private Task? _packetReceiveTask;
 
         public ObservableCollection<PacketDefinition> Packets { get; } = [];
-
         public ObservableCollection<PacketDefinition> FilteredPackets { get; } = [];
 
         private PacketDefinition? _selectedPacket;
@@ -29,8 +30,7 @@ namespace PacketSender
             {
                 _selectedPacket = value;
                 OnPropertyChanged();
-
-                PacketInstance.LoadPacket(value);
+                PacketViewModel.LoadPacket(value);
             }
         }
 
@@ -42,14 +42,13 @@ namespace PacketSender
             {
                 _searchText = value;
                 OnPropertyChanged();
-
                 _searchTimer.Stop();
                 _searchTimer.Start();
             }
         }
 
         public ICommand ClearSearchCommand { get; }
-        public PacketInstanceViewModel PacketInstance { get; }
+        public PacketInstanceViewModel PacketViewModel { get; }
         private readonly StringBuilder _logBuilder = new();
         private string _logText = string.Empty;
         private ScrollViewer? _logScrollViewer;
@@ -61,7 +60,6 @@ namespace PacketSender
             {
                 _logText = value;
                 OnPropertyChanged();
-
                 Dispatcher.BeginInvoke(new Action(ScrollToBottom), DispatcherPriority.Background);
             }
         }
@@ -71,10 +69,11 @@ namespace PacketSender
         public MainWindow()
         {
             InitializeComponent();
-            PacketInstance = new PacketInstanceViewModel();
-            PacketInstance.PacketSendRequested += OnPacketSendRequest;
+            PacketViewModel = new PacketInstanceViewModel();
+            PacketViewModel.PacketSendRequested += OnPacketSendRequest;
 
             DataContext = this;
+            _cancellationTokenSource = new CancellationTokenSource();
 
             _searchTimer = new DispatcherTimer
             {
@@ -100,7 +99,212 @@ namespace PacketSender
             this.Loaded += (_, _) =>
             {
                 _logScrollViewer = FindLogScrollViewer();
+                StartPacketReceiver();
             };
+
+            this.Closing += (_, _) =>
+            {
+                StopPacketReceiver();
+            };
+        }
+
+        private void StartPacketReceiver()
+        {
+            _packetReceiveTask = Task.Run(async () =>
+            {
+                while (!_cancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        if (ClientProxySender.Instance.GetStreamDataFromStoredPacket(out var streamData))
+                        {
+                            if (streamData is { Length: > 0 })
+                            {
+                                Dispatcher.Invoke(() =>
+                                {
+                                    LogReceivedPacket(streamData);
+                                });
+
+                                await LogReceivedPacketToFileAsync(streamData);
+                            }
+                        }
+
+                        await Task.Delay(10, _cancellationTokenSource.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            LogErrorToUi($"Packet receive error: {ex.Message}");
+                        });
+
+                        await Task.Delay(100, _cancellationTokenSource.Token);
+                    }
+                }
+            }, _cancellationTokenSource.Token);
+        }
+
+        private void StopPacketReceiver()
+        {
+            try
+            {
+                _cancellationTokenSource.Cancel();
+                _packetReceiveTask?.Wait(TimeSpan.FromSeconds(2));
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error stopping packet receiver: {ex.Message}");
+            }
+            finally
+            {
+                _cancellationTokenSource.Dispose();
+            }
+        }
+
+        private void LogReceivedPacket(byte[] packetData)
+        {
+            var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+
+            _logBuilder.AppendLine($"[{timestamp}] === PACKET RECEIVED ===");
+            _logBuilder.AppendLine($"Binary Size: {packetData.Length} bytes");
+
+            try
+            {
+                var parsedData = ParseReceivedPacket(packetData);
+                if (parsedData != null)
+                {
+                    _logBuilder.AppendLine($"Packet ID: {parsedData.PacketId}");
+                    _logBuilder.AppendLine($"Packet Name: {parsedData.PacketName}");
+                    _logBuilder.AppendLine("Fields:");
+                    foreach (var field in parsedData.Fields)
+                    {
+                        _logBuilder.AppendLine($"  {field.Key}: {FormatFieldValue(field.Value)}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logBuilder.AppendLine($"Parse error: {ex.Message}");
+            }
+
+            _logBuilder.AppendLine($"Hex: {BitConverter.ToString(packetData).Replace("-", " ")}");
+            _logBuilder.AppendLine();
+
+            LogText = _logBuilder.ToString();
+
+            if (_logBuilder.Length <= 100000)
+            {
+                return;
+            }
+
+            var lines = LogText.Split('\n');
+            var keepLines = lines.Skip(Math.Max(0, lines.Length - 500)).ToArray();
+            _logBuilder.Clear();
+            _logBuilder.AppendLine("[LOG TRUNCATED - Showing recent 500 lines]");
+            _logBuilder.AppendLine();
+            foreach (var line in keepLines)
+            {
+                _logBuilder.AppendLine(line);
+            }
+            LogText = _logBuilder.ToString();
+        }
+
+        private async Task LogReceivedPacketToFileAsync(byte[] packetData)
+        {
+            try
+            {
+                EnsureLogDirectory();
+                var logFilePath = GetLogFilePath();
+
+                var logEntry = new StringBuilder();
+                logEntry.AppendLine($"=== PACKET RECEIVED at {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} ===");
+                logEntry.AppendLine($"Binary Size: {packetData.Length} bytes");
+
+                try
+                {
+                    var parsedData = ParseReceivedPacket(packetData);
+                    if (parsedData != null)
+                    {
+                        logEntry.AppendLine($"Packet ID: {parsedData.PacketId}");
+                        logEntry.AppendLine($"Packet Name: {parsedData.PacketName}");
+                        logEntry.AppendLine("Fields:");
+                        foreach (var field in parsedData.Fields)
+                        {
+                            logEntry.AppendLine($"  {field.Key}: {FormatFieldValue(field.Value)}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logEntry.AppendLine($"Parse error: {ex.Message}");
+                }
+
+                logEntry.AppendLine($"Binary Data (Hex): {BitConverter.ToString(packetData).Replace("-", " ")}");
+                logEntry.AppendLine($"Binary Data (Base64): {Convert.ToBase64String(packetData)}");
+                logEntry.AppendLine();
+
+                await File.AppendAllTextAsync(logFilePath, logEntry.ToString());
+            }
+            catch (Exception ex)
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    LogErrorToUi($"File log error: {ex.Message}");
+                });
+            }
+        }
+
+        private ParsedPacketData? ParseReceivedPacket(byte[] packetData)
+        {
+            if (packetData.Length < 4)
+            {
+                return null;
+            }
+
+            using var stream = new MemoryStream(packetData);
+            using var reader = new BinaryReader(stream, Encoding.UTF8);
+
+            try
+            {
+                var packetId = reader.ReadInt32();
+                var packetDefinition = Packets[packetId - 1];
+
+                var fields = new Dictionary<string, object>();
+
+                while (stream.Position < stream.Length)
+                {
+                    try
+                    {
+                        foreach (var item in packetDefinition.Items)
+                        {
+                            fields[item.Name] = "";
+                        }
+
+                        var value = DeserializeFieldValue(reader);
+                    }
+                    catch
+                    {
+                        break;
+                    }
+                }
+
+                return new ParsedPacketData { PacketId = packetId, PacketName = packetDefinition.PacketName, Fields = fields };
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private class ParsedPacketData
+        {
+            public int PacketId { get; init; }
+            public string PacketName { get; init; }
+            public Dictionary<string, object> Fields { get; init; } = new();
         }
 
         private void LoadPackets()
@@ -199,7 +403,7 @@ namespace PacketSender
             return stream.ToArray();
         }
 
-        private void SerializeFieldValue(BinaryWriter writer, object value)
+        private static void SerializeFieldValue(BinaryWriter writer, object value)
         {
             switch (value)
             {
@@ -299,7 +503,7 @@ namespace PacketSender
         private void LogErrorToUi(string errorMessage)
         {
             var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
-            _logBuilder.AppendLine($"[{timestamp}] ❌ ERROR: {errorMessage}");
+            _logBuilder.AppendLine($"[{timestamp}] ERROR: {errorMessage}");
             _logBuilder.AppendLine();
 
             Dispatcher.Invoke(() =>
