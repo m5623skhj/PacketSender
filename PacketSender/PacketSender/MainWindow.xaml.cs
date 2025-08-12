@@ -180,9 +180,21 @@ namespace PacketSender
                     _logBuilder.AppendLine($"Packet ID: {parsedData.PacketId}");
                     _logBuilder.AppendLine($"Packet Name: {parsedData.PacketName}");
                     _logBuilder.AppendLine("Fields:");
-                    foreach (var field in parsedData.Fields)
+                    
+                    var packetDefinition = Packets.FirstOrDefault(p => p.PacketId == parsedData.PacketId);
+                    if (packetDefinition != null)
                     {
-                        _logBuilder.AppendLine($"  {field.Key}: {FormatFieldValue(field.Value)}");
+                        foreach (var field in parsedData.Fields)
+                        {
+                            _logBuilder.AppendLine($"  {field.Key} : {FormatFieldValue(field.Value)}");
+                        }
+                    }
+                    else
+                    {
+                        foreach (var field in parsedData.Fields)
+                        {
+                            _logBuilder.AppendLine($"  {field.Key}: {FormatFieldValue(field.Value)}");
+                        }
                     }
                 }
             }
@@ -232,9 +244,21 @@ namespace PacketSender
                         logEntry.AppendLine($"Packet ID: {parsedData.PacketId}");
                         logEntry.AppendLine($"Packet Name: {parsedData.PacketName}");
                         logEntry.AppendLine("Fields:");
-                        foreach (var field in parsedData.Fields)
+                        
+                        var packetDefinition = Packets.FirstOrDefault(p => p.PacketId == parsedData.PacketId);
+                        if (packetDefinition != null)
                         {
-                            logEntry.AppendLine($"  {field.Key}: {FormatFieldValue(field.Value)}");
+                            foreach (var field in parsedData.Fields)
+                            {
+                                logEntry.AppendLine($"  {field.Key} : {FormatFieldValue(field.Value)}");
+                            }
+                        }
+                        else
+                        {
+                            foreach (var field in parsedData.Fields)
+                            {
+                                logEntry.AppendLine($"  {field.Key}: {FormatFieldValue(field.Value)}");
+                            }
                         }
                     }
                 }
@@ -275,27 +299,30 @@ namespace PacketSender
 
                 var fields = new Dictionary<string, object>();
 
-                while (stream.Position < stream.Length)
+                foreach (var item in packetDefinition.Items)
                 {
                     try
                     {
-                        foreach (var item in packetDefinition.Items)
+                        if (stream.Position >= stream.Length)
                         {
-                            fields[item.Name] = "";
+                            break;
                         }
 
-                        var value = DeserializeFieldValue(reader);
+                        var value = DeserializeFieldValue(reader, item.Type);
+                        fields[item.Name] = value;
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        break;
+                        fields[item.Name] = $"<PARSE_ERROR: {ex.Message}>";
+                        System.Diagnostics.Debug.WriteLine($"Failed to parse field '{item.Name}': {ex.Message}");
                     }
                 }
 
                 return new ParsedPacketData { PacketId = packetId, PacketName = packetDefinition.PacketName, Fields = fields };
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"Failed to parse packet: {ex.Message}");
                 return null;
             }
         }
@@ -430,33 +457,68 @@ namespace PacketSender
             }
         }
 
-        private object DeserializeFieldValue(BinaryReader reader)
+        private object DeserializeFieldValue(BinaryReader reader, string fieldType)
         {
-            var typeMarker = reader.ReadByte();
-
-            return typeMarker switch
+            try
             {
-                1 => reader.ReadInt32(),
-                2 => reader.ReadSingle(),
-                3 => reader.ReadDouble(),
-                4 => reader.ReadBoolean(),
-                5 => reader.ReadString(),
-                6 => DeserializeArray(reader),
-                _ => reader.ReadString()
-            };
+                return fieldType switch
+                {
+                    "int" => reader.ReadInt32(),
+                    "float" => reader.ReadSingle(),
+                    "double" => reader.ReadDouble(),
+                    "bool" => reader.ReadBoolean(),
+                    "std::string" => ReadStringWithLength(reader),
+                    "array" => DeserializeArray(reader, "int"),
+                    _ => throw new ArgumentException($"Unknown field type: {fieldType}")
+                };
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DeserializeFieldValue error for type '{fieldType}': {ex.Message}");
+                throw;
+            }
         }
 
-        private object[] DeserializeArray(BinaryReader reader)
+        private object[] DeserializeArray(BinaryReader reader, string elementType)
         {
-            var length = reader.ReadInt32();
-            var array = new object[length];
-
-            for (var i = 0; i < length; i++)
+            try
             {
-                array[i] = DeserializeFieldValue(reader);
-            }
+                var length = reader.ReadInt32();
+                
+                if (length is < 0 or > 10000)
+                {
+                    throw new ArgumentException($"Invalid array length: {length}");
+                }
+                
+                var array = new object[length];
 
-            return array;
+                for (var i = 0; i < length; i++)
+                {
+                    array[i] = DeserializeFieldValue(reader, elementType);
+                }
+
+                return array;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DeserializeArray error: {ex.Message}");
+                throw;
+            }
+        }
+
+        private static string ReadStringWithLength(BinaryReader reader)
+        {
+            try
+            {
+                var length = reader.ReadUInt16();
+                var bytes = reader.ReadBytes(length);
+                return Encoding.UTF8.GetString(bytes);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ReadStringWithLength error: {ex.Message}");
+                throw;
+            }
         }
 
         private void LogPacketToUi(int packetId, Dictionary<string, object> fieldValues, byte[] binaryData)
