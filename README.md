@@ -14,16 +14,15 @@
 4. **사용자가 구성한 패킷을 서버로 송신**
 
 
-예시:
-cpp class:   
-<img width="371" height="244" alt="image" src="https://github.com/user-attachments/assets/237a9391-b893-49cc-a596-7ad65fcf2b43" />
+예시:  
+.yml 파일:   
+<img width="726" height="606" alt="image" src="https://github.com/user-attachments/assets/5fed87e0-d3ae-40a8-9bf2-234f459f40ce" />
 
 → GUI 출력:
-<img width="983" height="588" alt="image" src="https://github.com/user-attachments/assets/01d7e85a-a914-42b1-a325-ab12736debec" />
+<img width="1171" height="882" alt="image" src="https://github.com/user-attachments/assets/a17b2439-b516-4adf-9be6-e3ea3ff712dc" />
 
-- 송신한 패킷 로그 출력
-  - UI, 파일에 출력되며, 파일 로그는 실행 파일 위치/Logs 폴더에 출력됩니다.
-<img width="1181" height="305" alt="image" src="https://github.com/user-attachments/assets/7381bfbc-415d-47b2-b633-c0cea7ce928f" />
+- 송신한 패킷 및 수신 받은 패킷 로그 출력
+  - UI 및 파일에 출력되며, 파일 로그는 실행 파일 위치/Logs 폴더에 출력됩니다.
 
 ---
 
