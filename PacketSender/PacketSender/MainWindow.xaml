@@ -363,7 +363,7 @@
         <!-- 로그 패널 (새로 추가된 부분) -->
         <DockPanel Grid.Row="2" Grid.ColumnSpan="3">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="5" Background="#f8f8f8">
-                <TextBlock Text="📋 Packet Send Log" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="5"/>
+                <TextBlock Text="📋 Packet Log" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="5"/>
                 <Button Content="Clear Log" Margin="10,3,0,3" Padding="8,3" Command="{Binding ClearLogCommand}"
                         Background="LightCoral" Foreground="White" FontWeight="Bold"/>
                 <TextBlock Text="|" Margin="10,0" VerticalAlignment="Center" Foreground="Gray"/>
