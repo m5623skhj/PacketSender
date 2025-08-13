@@ -20,7 +20,7 @@
 <img width="726" height="606" alt="image" src="https://github.com/user-attachments/assets/5fed87e0-d3ae-40a8-9bf2-234f459f40ce" />
 
 → GUI 출력:
-<img width="1171" height="882" alt="image" src="https://github.com/user-attachments/assets/a17b2439-b516-4adf-9be6-e3ea3ff712dc" />
+<img width="1178" height="738" alt="image" src="https://github.com/user-attachments/assets/de4940b8-e1c0-49f9-a330-e96f8682a8b2" />
 
 - 송신한 패킷 및 수신 받은 패킷 로그 출력
   - UI 및 파일에 출력되며, 파일 로그는 실행 파일 위치/Logs 폴더에 출력됩니다.
