@@ -330,7 +330,7 @@ namespace PacketSender
         private class ParsedPacketData
         {
             public int PacketId { get; init; }
-            public string PacketName { get; init; }
+            public string? PacketName { get; init; }
             public Dictionary<string, object> Fields { get; init; } = new();
         }
 

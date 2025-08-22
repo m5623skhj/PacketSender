@@ -239,7 +239,7 @@ namespace PacketSender.ViewModels
             try
             {
                 value = value.Trim();
-                if (!"[".StartsWith(value) || !value.EndsWith($"]"))
+                if (!"[".StartsWith(value) || !value.EndsWith(']'))
                 {
                     return Array.Empty<object>();
                 }
